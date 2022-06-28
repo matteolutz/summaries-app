@@ -1,0 +1,114 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
+
+import '../structures/course.dart';
+import '../util/state.dart';
+import './day_overview.dart';
+import '../structures/exam.dart';
+import '../util/db.dart';
+
+class CalendarPage extends StatefulWidget {
+  const CalendarPage({Key? key}) : super(key: key);
+
+  @override
+  State<CalendarPage> createState() => _CalendarPageState();
+}
+
+class _CalendarPageState extends State<CalendarPage> {
+  DateTime? _selectedDay;
+  DateTime _focusedDay = DateTime.now();
+
+  QuerySnapshot<Exam>? exams;
+  Map<Course, List<Exam>>? _mappedExams;
+
+  void _daySelected(DateTime selectedDay, DateTime focusedDay) {
+    showModalBottomSheet(
+        context: context,
+        builder: (context) => DayOverviewPage(selectedDay: selectedDay),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+    );
+
+    if (isSameDay(selectedDay, _selectedDay)) return;
+
+    setState(() {
+      _selectedDay = selectedDay;
+      _focusedDay = focusedDay;
+    });
+  }
+
+  List<Exam> _eventLoader(DateTime day) {
+    if (exams == null) return [];
+
+    return exams!.docs
+        .map((e) => e.data())
+        .where((element) => isSameDay(element.dateTime, day))
+        .toList();
+  }
+
+  Future<void> test() async {
+    print(await StateInheritedWidget.of(context).getExamsForDay(DateTime.parse("2022-06-23T11:15:00.000Z")));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (exams == null) {
+      SummariesDB.getExams().then((exams) {
+        setState(() {
+          this.exams = exams;
+        });
+      });
+    }
+    test();
+
+    /*if(_mappedExams == null) {
+      SummariesDB.getCoursesForUser(StateInheritedWidget.of(context).state.user.unwrap().uid).then((courses) {
+        print("courses");
+
+        Map<Course, List<Exam>> mappedExams = <Course, List<Exam>>{};
+        for(final course in courses.docs) {
+          if(course.data().exams.length == 0) continue;
+          Future.wait(course.data().exams.map<Future<DocumentSnapshot<Exam>>>((e) => SummariesDB.getExam(e)).toList())
+              .then((exams) {
+                  mappedExams[course.data()] = exams.map<Exam>((e) => e.data()!).toList();
+            });
+        }
+      });
+    }*/
+
+    return ListView(children: [
+      TableCalendar(
+        firstDay: DateTime.now().subtract(const Duration(days: 365)),
+        lastDay: DateTime.now().add(const Duration(days: 365)),
+        focusedDay: _focusedDay,
+        locale: 'de_DE',
+        onDaySelected: _daySelected,
+        selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
+        onPageChanged: (DateTime focusedDay) => _focusedDay = focusedDay,
+        startingDayOfWeek: StartingDayOfWeek.monday,
+        eventLoader: _eventLoader,
+        calendarStyle: CalendarStyle(
+          todayDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            shape: BoxShape.circle,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondary,
+            shape: BoxShape.circle,
+          ),
+          markerDecoration: const BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+          ),
+        ),
+        availableCalendarFormats: const {
+          CalendarFormat.month: 'Monat',
+          CalendarFormat.twoWeeks: '2 Wochen',
+          CalendarFormat.week: 'Woche',
+        },
+      ),
+    ]);
+  }
+}

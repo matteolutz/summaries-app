@@ -1,0 +1,5 @@
+Die Idee hinter dem Projekt "SUMmaries" ist die Möglichkeit einer Übersicht aller stufenbezogener Prüfungen.
+
+Mithilfe dieser App lassen sich kinderleicht Lernzettel und Zusammenfassungen für jede Prüfung einstellen.
+
+In naher Zukunft sollen auch noch weitere Funktionen, wie zum Beispiel das Erstellen eines Lernplans, möglich sein.
